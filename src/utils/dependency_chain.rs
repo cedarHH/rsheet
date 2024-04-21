@@ -12,7 +12,7 @@ lazy_static! {
 }
 
 // Enum of errors in topological ordering
-enum TopoError {
+pub enum TopoError {
     NodeNotFound,
     CycleDetected(Vec<(u32, u32)>),
 }
