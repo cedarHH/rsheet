@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env::var;
 use rsheet_lib::cells::{column_name_to_number,column_number_to_name};
 use rsheet_lib::replies::Reply;
 use rsheet_lib::command_runner::{CellValue,CommandRunner,CellArgument};
@@ -56,25 +57,16 @@ impl Command {
                         let cell_value = database_get_value(cell);
                         match cell_value.dependency {
                             Some(expr) => {
-                                let mut error_flag = false;
                                 let runner = CommandRunner::new(&expr);
                                 let var_list = runner.find_variables();
                                 let mut variables = HashMap::new();
                                 for id in var_list.iter() {
                                     match parse_cell_range(id) {
                                         Some(cell_arg) => {variables.insert(id.clone(), cell_arg);}
-                                        None => {
-                                            error_flag = true;
-                                            break
-                                        }
+                                        None => ()
                                     }
                                 }
-                                if error_flag{
-                                    database_insert(*cell, CellRef::new(CellValue::Error("Depends on an Error".to_string()), Some(expr)));
-                                }
-                                else {
-                                    database_insert(*cell, CellRef::new(runner.run(&variables),Some(expr)));
-                                }
+                                database_insert(*cell, CellRef::new(runner.run(&variables),Some(expr)));
                             }
                             None => ()
                         }
@@ -171,7 +163,7 @@ fn parse_cell_range(cell_id: &str) -> Option<CellArgument> {
     match parts.len() {
         1 => {
             split_cell_id(parts[0]).and_then(|index| {
-                if let CellValue::Error(_)|CellValue::None = database_get_value(&index).cell_value{
+                if let CellValue::Error(_) = database_get_value(&index).cell_value{
                     return None
                 }
                 Some(CellArgument::Value(database_get_value(&index).cell_value))
