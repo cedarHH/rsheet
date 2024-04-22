@@ -25,4 +25,3 @@ pub fn start_server<M>(mut manager: M) -> Result<(), Box<dyn Error>>
     }
     Ok(())
 }
-

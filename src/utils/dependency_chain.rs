@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 // Global variables for static lifecycle
 // Store all dependencies using a directed graph
 lazy_static! {
-    pub static ref DEPENDENCIES: RwLock<DiGraph<(u32, u32), ()>> = RwLock::new(DiGraph::new());
+    static ref DEPENDENCIES: RwLock<DiGraph<(u32, u32), ()>> = RwLock::new(DiGraph::new());
 }
 
 // Enum of errors in topological ordering
@@ -157,6 +157,7 @@ pub fn find_topology_sort_of_weakly_component(node: (u32, u32)) -> Result<Vec<(u
 //         Err(TopoError::NodeNotFound) => println!("Error: Node not found"),
 //         Err(TopoError::CycleDetected(cycle)) => println!("Detected cycle: {:?}", cycle),
 //     };
+//
 //     drop(graph);
 //
 //     // test2:
@@ -171,7 +172,7 @@ pub fn find_topology_sort_of_weakly_component(node: (u32, u32)) -> Result<Vec<(u
 //     let graph = DEPENDENCIES.read().unwrap();
 //     println!("{:?}", graph);
 //     match find_topology_sort_of_weakly_component((2, 2)) {
-//         Ok(topo_sort) => println!("Topological sort: {:?}", topo_sort),
+//         Ok(topo_sort) =>                                                                                                                                                                                                                                                                                                    ,
 //         Err(TopoError::NodeNotFound) => println!("Error: Node not found"),
 //         Err(TopoError::CycleDetected(cycle)) => println!("Detected cycle: {:?}", cycle),
 //     }
@@ -199,7 +200,7 @@ pub fn find_topology_sort_of_weakly_component(node: (u32, u32)) -> Result<Vec<(u
 //     // Graph:
 //     // 3 -> 5 -> 9
 //     //   ↙ ↑
-//     // 1 -> 4    6 -> 7
+//     // 1    4    6 -> 7
 //     // ↓ ↗        ↗
 //     // 2         8
 //     // Detected cycle

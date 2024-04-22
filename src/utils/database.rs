@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use dashmap::DashMap;
+use log::__private_api::Value;
 use rsheet_lib::command_runner::CellValue;
 
 #[derive(Clone)]
@@ -17,14 +18,18 @@ impl CellRef {
     }
 }
 
+// Global variables for static lifecycle
+// Storing Spreadsheets Using `DashMap`
+lazy_static! {
+    static ref DATABASE: DashMap<(u32, u32), CellRef> = DashMap::new();
+}
+
 pub fn database_get_value(key: &(u32, u32)) -> CellRef {
     DATABASE.get(key)
         .map(|entry| entry.clone())
         .unwrap_or(CellRef::new(CellValue::None,None))
 }
 
-// Global variables for static lifecycle
-// Storing Spreadsheets Using `DashMap`
-lazy_static! {
-    pub static ref DATABASE: DashMap<(u32, u32), CellRef> = DashMap::new();
+pub fn database_insert(key:(u32, u32), value: CellRef) -> Option<CellRef>{
+    DATABASE.insert(key, value)
 }

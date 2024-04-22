@@ -7,8 +7,7 @@ pub fn handle_connection(mut recv: impl Reader, mut send: impl Writer) {
         match recv.read_message() {
             Ok(msg) => {
                 let command = parse_command(&msg);
-                let result = command.execute();
-                if let Some(response) = result{
+                if let Some(response) = command.execute(){
                     if let Err(err) = send.write_message(response) { break; };
                 }
             },
