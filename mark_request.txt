@@ -7,22 +7,99 @@ to receive marks for the Design Questions.
 
 ## Question 1:
 
+I use the concurrent hashmap provided by Dashmap to store the data of
+the spreadsheet and the dependencies of each cell.
+For the get command, my program converts the cell address into the key
+for the hashmap, then queries the hashmap, and returns a value. If the
+key isn't in the hashmap, it returns `None`. If the value of this
+address is some error, it returns the error. if there is a dependency
+error in this cell, it returns the corresponding error.
+For the `set <Cell> <Expr>` command, my program first stores the `None`
+cell value and its expression into the hashmap. It then updates the
+dependency graph, identifies the connected component of the cell, performs
+topological sorting, and then updates the value of each cell in the
+hashmap in topological order. If the topological sorting detect a cycle,
+it stores the self-referencing error in the hashmap.
+
 ## Question 2:
+
+In my `src/utils/database.rs`, I handle Scalar, Vector, and Matrix variables
+I have two functions for converting between Scalars and hashmap keys. And
+there is a function for parsing Scalar, Vector, and Matrix variables and
+querying the database, which returns the corresponding `CellArguments`.
+Another function is used for extracting all the cells from the variables,
+converting them into hashmap keys to facilitate the construction of the
+dependency graph. I do have some redundant code, and I think I could
+encapsulate some of the repetitive parts into macros.
 
 ## Question 3:
 
+The concurrent data structures in my code are primarily located in
+`src/utils/database.rs` for storing spreadsheet data in a hashmap,
+and in `src/utils/dependency_manager.rs` for a directed graph that
+stores dependencies.
+For the hashmap, I've written two functions as interfaces for getting
+values and inserting key-value pairs. The insert function, which
+involves write operations, is called only in a dedicated transaction
+handling thread to avoid potential data races. For the directed graph
+which storing dependencies, I use a read-write lock. Similarly,
+operations on the directed graph are also called in this transaction
+handling thread to prevent deadlocks.
+Additionally, I use the `lazy_static!` macro to ensure that my concurrent
+data structures are initialized only once.
+If I only use a single thread, I would not need these read-write locks
+and concurrent hashmap.
+
 ## Question 4:
+
+In `src/utils/engine.rs`, I have a function for handling transactions
+that runs in a dedicated worker thread. This function uses an `mpsc receiver`
+to listen for update requests to the hashmap and directed graph sent from user
+threads. This is a multiple producer, single consumer model. For user threads,
+since the get command does not involve modifying the database, user threads can
+directly query the database. However, for set commands, which require
+modifications to the database, user threads send set requests to the transaction
+handling function in the worker thread. This function processes transactions one
+at a time, ensuring that operations on the database storing spreadsheet data are
+atomic. Therefore, for complex edge cases in part 4, the function executes the
+next set request only after the previous one has been completed. This setup
+ensures that an old set command does not overwrite a new one.
 
 ## Question 5:
 
+In `src/utils/engine.rs`, I manage spreadsheet dependencies using a transaction-handling
+thread, with structures and methods in `src/utils/dependency_manager.rs`. Dependencies
+are mapped in a directed graph, where cells are nodes linked by edges representing their
+dependencies.
+For example, when executing the command set A3 A2+A4, I first remove A3's previous dependencies,
+such as deleting the edge A8-A3. Then, I add new edges A2-A3 and A4-A3,
+updating the graph.
+Next, I identify A3's weakly connected component, for instance [A1, A2, A3, A4, A5], and perform
+a topological sort, resulting in the order A1->A2->A4->A3->A5. I calculate the cell values sequentially
+based on this order before update hashmap.
+If cycles exist, I use Tarjan's algorithm to find strongly connected components. Cells in these components
+are flagged with self-referential errors. A subsequent depth-first search sets all reachable cells to `Error`,
+because these cells end up depending on cells that are self-referential.
+
 # Questions to the Marker (OPTIONAL)
+
+Reference diagram for question 5:
+A1 -> A4 -> A5  A6 -> 7
+↓  ↗    ↗        ↗
+A2    A3  <---  A8
+
+`set A3 A2+A4`
+
+A1 -> A4 -> A5  A6 -> 7
+↓  ↗  ↓ ↗        ↗
+A2 <- A3        A8
 
 Remember: you don't have to fill these out; but if
 you want to get feedback on a particular element of
 your code; you can!
 
 1.
-
+Would using `async/await` be better than multi-threading for this assignment.
 2.
 
 3.

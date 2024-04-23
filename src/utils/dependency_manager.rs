@@ -1,9 +1,9 @@
 use lazy_static::lazy_static;
+use petgraph::algo::{tarjan_scc, toposort};
 use petgraph::graph::{DiGraph, NodeIndex, UnGraph};
-use petgraph::algo::{toposort, tarjan_scc};
-use petgraph::visit::{EdgeRef, IntoNodeReferences, NodeRef, Dfs};
-use std::sync::RwLock;
+use petgraph::visit::{Dfs, EdgeRef, IntoNodeReferences, NodeRef};
 use std::collections::{HashMap, HashSet};
+use std::sync::RwLock;
 
 // Global variables for static lifecycle
 // Store all dependencies using a directed graph
@@ -23,7 +23,8 @@ pub fn update_incoming_edges(a_vec: Vec<(u32, u32)>, b: (u32, u32)) {
 
     let node_b = find_or_add_node(&mut graph, b);
 
-    let incoming_edges_to_remove: Vec<_> = graph.edges_directed(node_b, petgraph::Direction::Incoming)
+    let incoming_edges_to_remove: Vec<_> = graph
+        .edges_directed(node_b, petgraph::Direction::Incoming)
         .map(|edge| edge.id())
         .collect();
     for edge_id in incoming_edges_to_remove {
@@ -51,7 +52,9 @@ fn find_or_add_node(graph: &mut DiGraph<(u32, u32), ()>, node: (u32, u32)) -> No
 //     and nodes that depend on nodes in the strongly connected component.
 // If the weakly connected component where the node is located is a directed acyclic graph,
 //     return the topological ordering `Vec<(u32,u32)`
-pub fn find_topology_sort_of_weakly_component(node: (u32, u32)) -> Result<Vec<(u32, u32)>, TopoError> {
+pub fn find_topology_sort_of_weakly_component(
+    node: (u32, u32),
+) -> Result<Vec<(u32, u32)>, TopoError> {
     let graph = DEPENDENCIES.read().unwrap();
 
     // Convert directed graph to undirected graph
@@ -88,18 +91,25 @@ pub fn find_topology_sort_of_weakly_component(node: (u32, u32)) -> Result<Vec<(u
     }
 
     // Find the maximal connected subgraph
-    let subgraph_nodes: Vec<NodeIndex> = connected_component.iter().map(|&index| index).collect();
-    let subgraph = graph.filter_map(|index, weight|
-                                        if subgraph_nodes.contains(&index) { Some(*weight) }
-                                        else { None },
-                                    |_,weight| Some(*weight));
+    let subgraph_nodes: Vec<NodeIndex> = connected_component.iter().copied().collect();
+    let subgraph = graph.filter_map(
+        |index, weight| {
+            if subgraph_nodes.contains(&index) {
+                Some(*weight)
+            } else {
+                None
+            }
+        },
+        |_, _| Some(()),
+    );
 
     // Perform topological sort
     match toposort(&subgraph, None) {
         //If the weakly connected component where the node is located is a directed acyclic graph,
         //     return the topological ordering `Vec<(u32,u32)`
         Ok(sorted_indices) => {
-            let sorted_values = sorted_indices.iter()
+            let sorted_values = sorted_indices
+                .iter()
                 .map(|&index| *subgraph.node_weight(index).unwrap())
                 .collect::<Vec<_>>();
             Ok(sorted_values)
@@ -113,7 +123,10 @@ pub fn find_topology_sort_of_weakly_component(node: (u32, u32)) -> Result<Vec<(u
             let scc = tarjan_scc(&*graph);
 
             // Find the strongly connected component that contains the cycle node
-            let cycle_component = scc.iter().find(|comp| comp.contains(&cycle_node_id)).unwrap();
+            let cycle_component = scc
+                .iter()
+                .find(|comp| comp.contains(&cycle_node_id))
+                .unwrap();
 
             // Find the nodes that depend on the strongly connected components
             let mut visited_nodes = HashSet::new();
@@ -124,7 +137,9 @@ pub fn find_topology_sort_of_weakly_component(node: (u32, u32)) -> Result<Vec<(u
                 }
             }
 
-            Err(TopoError::CycleDetected(visited_nodes.into_iter().collect()))
+            Err(TopoError::CycleDetected(
+                visited_nodes.into_iter().collect(),
+            ))
         }
     }
 }
