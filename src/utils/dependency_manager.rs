@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use petgraph::graph::{DiGraph, NodeIndex, UnGraph};
 use petgraph::algo::{toposort, tarjan_scc};
-use petgraph::visit::{EdgeRef, Walker, IntoNodeReferences, NodeRef, Dfs};
+use petgraph::visit::{EdgeRef, IntoNodeReferences, NodeRef, Dfs};
 use std::sync::RwLock;
 use std::collections::{HashMap, HashSet};
 
@@ -92,7 +92,7 @@ pub fn find_topology_sort_of_weakly_component(node: (u32, u32)) -> Result<Vec<(u
     let subgraph = graph.filter_map(|index, weight|
                                         if subgraph_nodes.contains(&index) { Some(*weight) }
                                         else { None },
-                                    |index, weight| Some(*weight));
+                                    |_,weight| Some(*weight));
 
     // Perform topological sort
     match toposort(&subgraph, None) {
